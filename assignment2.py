@@ -1,7 +1,11 @@
 import search as search
 from search import EightPuzzle
+from search import astar_search
 
-#calls solutions for water jug problem, eight puzzle problem, dating problem
+#calls solutions for water jug problem first
+#calls seach heursitic for eight puzzle problem next
+#calls for dating problem solution
+
 def main():
     problem1 = WaterJugProblem((0, 0), (2, 0))
     node = search.breadth_first_tree_search(problem1)
@@ -23,15 +27,83 @@ def main():
             f.write(f"Action: {action}, Resulting State: {state}\n")
 
     #changes goal state to the one shown in figure 1, sets the search method for eight puzzle problem to a* search
-    problem2 = EightPuzzle((3, 5, 1 ,8, 2, 6, 0 ,7, 4 ), (1, 2, 3, 8, 0, 4, 7, 6, 5))
-    search = search.astar_search(problem2)
-    if search:
-        print("A* Search Solution:")
-        search.solution()
+    initial_state = (3, 5, 1 ,8, 2, 6, 0 ,7, 4 )
+    goal_state = (1, 2, 3, 8, 0, 4, 7, 6, 5)
+    
+    #MANHATTAN HEURISTIC
+    #defines the eight puzzle problem in terms of a manhattan heuristic
+    manhattanProblem = ManhattanEight(initial_state, goal_state)
+    #checks a* sokution for manhattan distance heuristic
+    manhattanSolution = astar_search(manhattanProblem)
+    if manhattanSolution:
+        print("Manhattan Solution:" + "\n")
+        for step in manhattanSolution.path():
+            state_str = str(step.state)
+            print(state_str)
+        with open("solutionEight.txt", "w") as f:
+            f.write(f"ManhattanSolution:" + "\n" )
+            for step in manhattanSolution.path():
+                state_str = str(step.state)
+                f.write(state_str +"\n")
+    else:
+        print("No manhattan solution")
+
+    #defines the eight puzzle in terms of misplaced tiles heuristic
+    misplacedProblem = MisplacedTiles(initial_state, goal_state)
+    #checks a* for misplaced tiles heuristic
+    misplacedSolution = astar_search(misplacedProblem)
+    if misplacedSolution:
+        print("Misplaced Tiles Solution:" + "\n")
+        for step in misplacedSolution.path():
+            state_str = str(step.state)
+            print(state_str)
+        with open("solutionEight.txt", "a") as f:
+            f.write(f"MisplacedTilesSolution:" + "\n")
+            for step in misplacedSolution.path():
+                state_str = str(step.state)
+                f.write(state_str +"\n")
+    else:
+        print("No misplaced tiles solution")
+
+    #defines the eight puzzle in temrs of nilsson heuristic
+    nilssonProblem = NilssonScore(initial_state, goal_state)
+    #checks a* for nilsson score heursitic
+    nilssonSolution =  astar_search(nilssonProblem)
+    if nilssonSolution:
+        print("Nilsson Score Solution:" + "\n")
+        for step in nilssonSolution.path():
+            state_str = str(step.state)
+            print(state_str)
+        with open("solutionEight.txt", "a") as f:
+            f.write(f"NilssonSolution:"+ "\n" )
+            for step in nilssonSolution.path():
+                state_str = str(step.state)
+                f.write(state_str +"\n")
+    else:
+        print("No nilsson score solution")
 
 
+    #defines the eight puzzle in terms of nMaxSwaps heuristic
+    nMaxSwapsProblem = NMaxSwaps(initial_state, goal_state)
+    #checks a* for nmaxswaps heuristic
+    nMaxSwapsSolution = astar_search(nMaxSwapsProblem)
+    if nMaxSwapsSolution:
+        print("N-MaxSwaps Solution:" + "\n")
+        for step in nMaxSwapsSolution.path():
+            state_str = str(step.state)
+            print(state_str)
+        with open("solutionEight.txt", "a") as f:
+            f.write(f"NMaxSwapsSolution:" + "\n")
+            for step in nMaxSwapsSolution.path():
+                state_str = str(step.state)
+                f.write(state_str +"\n")
+    else:
+        print("No n max swaps solution")
 
-#WATER JUG PROBLEM
+    
+
+
+###############WATER JUG PROBLEM#####################
 #defines the water jug problem in terms of a search problem's states, initial state, transition model and goal test
 class WaterJugProblem:
     def __init__(self, initial, goal):
@@ -77,7 +149,10 @@ class WaterJugProblem:
         return c + 1
 
 
-#EIGHT PUZZLE PROBLEM 
+
+
+
+###############EIGHT PUZZLE PROBLEM##############
 #misplaced tiles heuristic
 class MisplacedTiles(EightPuzzle):
     def h(self, node):
@@ -108,26 +183,26 @@ class ManhattanEight(EightPuzzle):
 class NMaxSwaps(EightPuzzle):
     def h(self, node):
         nMaxSwaps = 0
-        #Copy current state values to action swaps
-        swap_state = list(node.state)
-        for i in range(len(node.state)):
-            for j in range(i + 1, len(node.state)):
-                if node.state[i] > node.state[j]:
-                    nMaxSwaps += 1
-        while swap_state != self.goal:
-                blankspot = swap_state.index(0)
-                # if blank is in the correct position, swap with first incorrect tile from left
-                if blankspot == self.goal.index(0):
-                    for i in range(len(swap_state)):
-                        if swap_state[i] != self.goal[i]:
-                            swap_state[blankspot], swap_state[i] = swap_state[i], swap_state[blankspot]
-                            nMaxSwaps += 1
-                            break
-                else:
-                    # Finding the index of tile that should be in the current blank position and swap it with the blank
-                    correct_tile_index = swap_state.index(self.goal[blankspot])
-                    swap_state[blankspot], swap_state[correct_tile_index] = swap_state[correct_tile_index], swap_state[blankspot]
-                    nMaxSwaps += 1
+
+        current_state = list(node.state)
+        goal_state = list(self.goal)
+
+        while current_state != goal_state:
+            blank_index = current_state.index(0)  # finds the index of the blank tile
+            goal_tile_at_blank = goal_state[blank_index]  # find what tile should be in the blank's position in the goal state
+            
+            if goal_tile_at_blank != 0:
+                swap_with = current_state.index(goal_tile_at_blank)  # find the index of the tile to be swapped with blank tile
+                current_state[blank_index], current_state[swap_with] = current_state[swap_with], current_state[blank_index]  # perform the swap
+                nMaxSwaps += 1  
+            else:  # if the blank is in the right position, find the first tile that is not in the right position and swap with the blank
+                for i, tile in enumerate(current_state):
+                    #look for tiles that dont match goal state
+                    if tile != goal_state[i]:  
+                        #swap to proper position
+                        current_state[blank_index], current_state[i] = current_state[i], current_state[blank_index]
+                        nMaxSwaps += 1
+                        break
 
         return nMaxSwaps
 
@@ -159,6 +234,8 @@ class SequenceScore(EightPuzzle):
             
             # moves to the next tile in the sequence
             row, col = next_row, next_col
+            if (row, col == 0,0):
+                break
         return sequenceScore
     
 
@@ -168,3 +245,6 @@ class NilssonScore(EightPuzzle):
         # Combining both heuristics with a weight for the sequence score
         nilssonScore = ManhattanEight.h(self, node) + 3 * SequenceScore.h(self, node)
         return nilssonScore
+
+if __name__ == "__main__":
+    main()
