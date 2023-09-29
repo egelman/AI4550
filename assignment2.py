@@ -1,10 +1,11 @@
 import search as search
 from search import EightPuzzle
 from search import astar_search
+from search import Problem
 
 #calls solutions for water jug problem first
 #calls seach heursitic for eight puzzle problem next
-#calls for dating problem solution
+#calls for dating problem solution last
 
 def main():
     problem1 = WaterJugProblem((0, 0), (2, 0))
@@ -48,6 +49,8 @@ def main():
     else:
         print("No manhattan solution")
 
+
+    #MISPLACED TILES HEURISTIC
     #defines the eight puzzle in terms of misplaced tiles heuristic
     misplacedProblem = MisplacedTiles(initial_state, goal_state)
     #checks a* for misplaced tiles heuristic
@@ -65,6 +68,8 @@ def main():
     else:
         print("No misplaced tiles solution")
 
+
+    #NILSSON SCORE HEURISTIC
     #defines the eight puzzle in temrs of nilsson heuristic
     nilssonProblem = NilssonScore(initial_state, goal_state)
     #checks a* for nilsson score heursitic
@@ -83,6 +88,7 @@ def main():
         print("No nilsson score solution")
 
 
+    #NMAXSWAPS HEURISTIC
     #defines the eight puzzle in terms of nMaxSwaps heuristic
     nMaxSwapsProblem = NMaxSwaps(initial_state, goal_state)
     #checks a* for nmaxswaps heuristic
@@ -100,12 +106,50 @@ def main():
     else:
         print("No n max swaps solution")
 
+
+    #DATING PROBLEM SEARCH
+    #set initial and goal states for dating problem
+    initial_seating = ('M', 'M', 'M', ' ', 'F', 'F', 'F')
+    goal_seating = ('M', 'F', 'M', 'F', 'M', 'F', ' ')
+    datingProblem = DatingGameProblem(initial_seating, goal_seating)
+
+    #checks DLS for dating problem
+    datingDLSSolution = search.depth_limited_search(datingProblem)
+    if datingDLSSolution:
+        print("Dating DLS Solution:" + "\n")
+        for step in datingDLSSolution.path():
+            state_str = str(step.state)
+            print(state_str)
+        with open("solutionDating.txt", "w") as f:
+            f.write(f"Dating DLS Solution:" + "\n")
+            for step in datingDLSSolution.path():
+                state_str = str(step.state)
+                f.write(state_str +"\n")
+    else:
+        print("No dating DLS solution")
+    
+    #checks a* for dating problem
+    datingAStarSolution = astar_search(datingProblem)
+    #writes A* solution to file
+    if datingAStarSolution:
+        print("Dating A* Solution:" + "\n")
+        for step in datingAStarSolution.path():
+            state_str = str(step.state)
+            print(state_str)
+        with open("solutionDating.txt", "a") as f:
+            f.write(f"Dating A* Solution:" + "\n")
+            for step in datingAStarSolution.path():
+                state_str = str(step.state)
+                f.write(state_str +"\n")
+    else:
+        print("No dating A* solution")
+
     
 
 
 ###############WATER JUG PROBLEM#####################
 #defines the water jug problem in terms of a search problem's states, initial state, transition model and goal test
-class WaterJugProblem:
+class WaterJugProblem(Problem):
     def __init__(self, initial, goal):
         self.initial = initial
         self.goal = goal
@@ -153,6 +197,7 @@ class WaterJugProblem:
 
 
 ###############EIGHT PUZZLE PROBLEM##############
+#defines all required heuristics as subclasses of the eight puzzle problem
 #misplaced tiles heuristic
 class MisplacedTiles(EightPuzzle):
     def h(self, node):
@@ -245,6 +290,78 @@ class NilssonScore(EightPuzzle):
         # Combining both heuristics with a weight for the sequence score
         nilssonScore = ManhattanEight.h(self, node) + 3 * SequenceScore.h(self, node)
         return nilssonScore
+
+
+###################DATING PROBLEM######################
+class DatingGameProblem(Problem):
+    """ The problem of six people, M and F, and seven seats which need to be arranged in
+    the right order. A state is represented as a tuple of length 7, where  element at
+    index i represents the tile number at index i (' ' if it's an empty square) """
+
+    def __init__(self, initial, goal=('M', 'F', 'M', 'F', 'M', 'F', ' ')):
+        """ Define goal state and initialize a problem """
+        super().__init__(initial, goal)
+
+    def find_blank_seat(self, state):
+        """Return the index of the blank seat in a given state"""
+        return state.index(' ')
+
+    def actions(self, state):
+        """ Return the actions that can be executed in the given state.
+        The result would be a list, since there are only four possible actions
+        in any given state of the environment """
+
+        possible_actions = []
+        blank_index = self.find_blank_seat(state)
+        
+        # Check left movements
+        if blank_index > 0: possible_actions.append(('MOVE', 1))
+        if blank_index > 1: possible_actions.append(('JUMP', 2))
+        if blank_index > 2: possible_actions.append(('JUMP', 3))
+        
+        # Check right movements
+        if blank_index < 6: possible_actions.append(('MOVE', -1))
+        if blank_index < 5: possible_actions.append(('JUMP', -2))
+        if blank_index < 4: possible_actions.append(('JUMP', -3))
+
+        return possible_actions
+
+    def result(self, state, action):
+        """ Given state and action, return a new state that is the result of the action.
+        Action is assumed to be a valid action in the state """
+
+        state_list = list(state)
+        blank_index = self.find_blank_seat(state_list)
+        action_type, action_value = action
+        
+        if action_type == 'MOVE':
+            state_list[blank_index], state_list[blank_index - action_value] = state_list[blank_index - action_value], state_list[blank_index]
+        elif action_type == 'JUMP':
+            state_list[blank_index], state_list[blank_index - action_value] = state_list[blank_index - action_value], state_list[blank_index]
+        
+        return tuple(state_list)
+
+    def goal_test(self, state):
+        """ Given a state, return True if state is a goal state or False, otherwise """
+        return state == self.goal
+
+    def path_cost(self, c, state1, action, state2):
+        action_type, action_value = action
+        # Moving to an adjacent empty chair has a cost of 1
+        if action_type == 'MOVE':
+            return c + 1
+        
+        # Jumping over one or two other persons
+        elif action_type == 'JUMP':
+            # The cost is equal to the number of persons jumped over
+            return c + abs(action_value) - 1
+    
+
+    def h(self, node):
+        """ Return the heuristic value for a given state. heuristic function used is 
+        h(n) = number of people in wrong seats """
+        return sum([1 for i in range(len(node.state)) if node.state[i] != self.goal[i] and node.state[i] != ' '])
+
 
 if __name__ == "__main__":
     main()
