@@ -6,8 +6,8 @@ from games import random_player
 from collections import namedtuple
 
 GameState = namedtuple('GameState', 'to_move, utility, board, moves, last_move')
-depth_limit = 1
-board_hw = 4
+depth_limit = 3
+board_hw = 5
 
 def copy_board(board):
         return [row[:] for row in board]
@@ -91,7 +91,7 @@ class BLOBS(Game):
         elif o_count > x_count:
             print("Player O wins!\nwith {} points\n".format(o_count))
         else:
-            print("It's a tie!")
+            print("It's a tie!\n")
         
     def display(self, state):
         board = state.board
@@ -128,16 +128,11 @@ class BLOBS(Game):
 
         material_advantage = player_blobs - opponent_blobs
 
-        player_moves = len(self.actions(state))
-        opponent_moves = len(self.get_all_moves(state.board, opponent))
-
-        mobility_advantage = player_moves - opponent_moves
-
-        return 3 * material_advantage + mobility_advantage
+        return material_advantage 
 
 
 
-def minmax_decision(game, state, depth=4, eval_fn=None, cutoff_test=None):
+def minmax_decision(game, state, depth=depth_limit, eval_fn=None, cutoff_test=None):
     eval_fn = eval_fn or game.evaluation
     cutoff_test = cutoff_test or (lambda state, depth: depth <= 0 or game.terminal_test(state))
 
