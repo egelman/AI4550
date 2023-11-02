@@ -6,7 +6,7 @@ from games import random_player
 from collections import namedtuple
 
 GameState = namedtuple('GameState', 'to_move, utility, board, moves, last_move')
-depth_limit = 4
+depth_limit = 3
 board_hw = 5
 
 def copy_board(board):
